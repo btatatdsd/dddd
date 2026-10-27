@@ -219,15 +219,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
 [data-reveal] { opacity: 0; transform: translateY(30px); transition: all 0.8s var(--ease); }
 [data-reveal].is-visible { opacity: 1; transform: translateY(0); }
 
-/* ============ MODAL ============ */
-.modal { position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center; }
-.modal[hidden] { display: none; }
-.modal__backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
-.modal__card { position: relative; background: var(--card); border: 1px solid var(--line); padding: 40px; max-width: 400px; width: 90%; text-align: center; border-radius: 8px; }
-.modal__card h3 { font-family: var(--font-h); font-size: 1.8rem; margin-bottom: 15px; }
-.modal__card p { color: var(--muted); font-size: .9rem; margin-bottom: 30px; }
-.modal__actions { display: flex; gap: 15px; justify-content: center; }
-
 /* ============ RESPONSIVE ============ */
 .burger { display: none; background: none; border: none; cursor: pointer; flex-direction: column; gap: 5px; z-index: 1001; }
 .burger span { display: block; width: 25px; height: 2px; background: #fff; transition: 0.3s; }
@@ -593,7 +584,6 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.classList.remove('is-loading');
     }, 800);
   });
-  // Fallback if load takes too long
   setTimeout(() => {
     loader.classList.add('is-done');
     document.body.classList.remove('is-loading');
@@ -634,7 +624,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   reveals.forEach(el => observer.observe(el));
 
-  // 4. Form Validation & Mock Submit
+  // 4. Form Validation & Discord Webhook Submission
   const form = document.getElementById('applyForm');
   const submitBtn = document.getElementById('submitBtn');
   const success = document.getElementById('success');
@@ -647,11 +637,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  form.addEventListener('submit', (e) => {
+  // ⚠️ HNA FIN KAYN L'WEBHOOK DYALK
+  const WEBHOOK_URL = "https://discord.com/api/webhooks/1564648503886741676/QHnec7lIm4rEaRCdbvazqVlV0UH65glg2m3h0_-OSlfEbwC6suu6bBSQtKFQsXyIIpQG";
+
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     let isValid = true;
     
-    // Simple validation check
+    // Validation
     form.querySelectorAll('input[required], select[required], textarea[required]').forEach(input => {
       const errMsg = form.querySelector(`[data-err="${input.id}"]`);
       if (!input.value.trim()) {
@@ -665,17 +658,57 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     if (isValid) {
-      // Mock loading state
+      // Loading state
       submitBtn.classList.add('is-loading');
       submitBtn.disabled = true;
-      
-      setTimeout(() => {
+
+      // Collect data
+      const formData = new FormData(form);
+      const data = Object.fromEntries(formData.entries());
+
+      // Discord Embed structure
+      const discordPayload = {
+        embeds: [{
+          title: "📝 New Gang Application",
+          color: 16722749, // Red (HEX: FF2B3D)
+          fields: [
+            { name: "Player Name", value: data.playerName || "N/A", inline: true },
+            { name: "Discord", value: data.discord || "N/A", inline: true },
+            { name: "Age", value: String(data.age) || "N/A", inline: true },
+            { name: "Country", value: data.country || "N/A", inline: true },
+            { name: "Activity", value: data.activity || "N/A", inline: true },
+            { name: "RP Experience", value: data.rpExperience || "N/A", inline: true },
+            { name: "Previous Gangs", value: data.previousGangs || "None", inline: false },
+            { name: "Why Join?", value: data.whyJoin || "N/A", inline: false },
+            { name: "What Bring?", value: data.whatBring || "N/A", inline: false },
+            { name: "Additional Info", value: data.additional || "None", inline: false }
+          ],
+          timestamp: new Date().toISOString(),
+          footer: { text: "FAMILIES GANG Recruitment System" }
+        }]
+      };
+
+      try {
+        // Send to Discord
+        const response = await fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(discordPayload)
+        });
+
+        if (!response.ok) throw new Error('Network response was not ok');
+
+        // Success UI
         form.hidden = true;
         success.hidden = false;
         document.getElementById('successId').textContent = 'FAM-' + Math.floor(Math.random() * 10000);
+      } catch (error) {
+        alert('وقع خطأ فالإرسال، عاود المحاولة من بعد.');
+        console.error(error);
+      } finally {
         submitBtn.classList.remove('is-loading');
         submitBtn.disabled = false;
-      }, 1500);
+      }
     }
   });
 
